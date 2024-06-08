@@ -1,12 +1,20 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
 export const useUserStore = defineStore('userStore', () => {
-    // const count = ref(0)
-    // const doubleCount = computed(() => count.value * 2)
-    // function increment() {
-    //   count.value++
-    // }
+    // 个人信息
+    const userInfo = ref({});
+    const setUserInfo = (newData) => { userInfo.value = newData; }
 
-    // return { count, doubleCount, increment }
-})
+    // 预约记录
+    const recordList = ref([]);
+    const setRecordList = (newData) => { recordList.value = newData; }
+
+    return {
+        userInfo, setUserInfo,
+        recordList, setRecordList
+    };
+}, {
+    // 持久化存储
+    persist: true
+});

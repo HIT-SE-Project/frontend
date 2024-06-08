@@ -26,9 +26,9 @@ import { ElMessage } from 'element-plus';
 const router = useRouter();
 
 const tabs = [
-    { label: '预约面板', route: '/user/appointment' },
-    { label: '个人信息', route: '/user/profile' },
-    { label: 'ApiTest', route: '/user/test' }
+    { label: '预约面板', route: '/doctor/appointment' },
+    { label: '个人信息', route: '/doctor/profile' },
+    { label: 'ApiTest', route: '/doctor/test' }
 ];
 const activeTab = ref(0);
 
@@ -62,8 +62,6 @@ async function handleLogout() {
         });
     }
 }
-
-
 
 </script>
 
