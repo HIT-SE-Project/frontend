@@ -25,7 +25,6 @@ import TabBar from './components/TabBar.vue';
 .tab-bar-container {
     height: 70px;
     width: 100%;
-    background-color: blue;
 }
 
 

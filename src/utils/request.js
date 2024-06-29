@@ -7,11 +7,11 @@ import axios from 'axios';
 import qs from 'qs';
 
 // 解决跨域问题，代理设置在`vite.config.js`
-const baseURL = '/api';
+// const baseURL = '/api';
 
 const instance = axios.create({
-    baseURL: baseURL, // 替换为你的后端API基础URL
-    // baseURL: 'http://114.116.250.107:8080',
+    // baseURL: baseURL, // 替换为你的后端API基础URL
+    baseURL: 'http://114.116.250.107:8080',
     headers: {
         'Content-Type': 'application/json'
     },
@@ -30,35 +30,5 @@ instance.interceptors.request.use(
         return Promise.reject(error);
     }
 );
-
-// // 响应拦截器
-// instance.interceptors.response.use(
-//     result => {
-//         if (result.status === 200) {
-//             if(result.data.msg === 'token无效'){
-//                 ElMessage.error('请先登录！')
-//                 router.push('login')
-//                 return Promise.reject(result.data);
-//             }
-//             return result.data;
-//         } else {
-//             ElMessage.error('服务异常')
-//             // 异步的状态转化成失败的状态
-//             return Promise.reject(result.data);
-//         }
-//     },
-//     err => {
-//         if (err.response.status === 401) {
-//             ElMessage.error('请先登录！')
-//             router.push('login')
-//         } else {
-//             ElMessage.error('服务异常')
-
-//         }
-
-//         // 异步的状态转化成失败的状态
-//         return Promise.reject(err);
-//     }
-// )
 
 export default instance;

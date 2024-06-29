@@ -5,13 +5,23 @@
             <div class="tab" v-for="(tab, index) in tabs" :key="index" @click="changeTab(index)"
                 :class="{ active: activeTab === index }">
                 <div class="tab-item"
-                    :style="{ backgroundColor: activeTab === index ? '#007bff' : '#fff', color: activeTab === index ? '#fff' : '#000' }">
+                    :style="{ backgroundColor: activeTab === index ? '#0077c2' : '#fff', color: activeTab === index ? '#fff' : '#000' }">
                     {{ tab.label }}
                 </div>
             </div>
         </div>
         <div class="right">
-            <el-button type="warning" @click="handleLogout">退出登录</el-button>
+            <el-tooltip content="待处理预约信息" placement="top" effect="dark" style="margin-right: 20px; margin-top: 10px;">
+                <el-badge v-if="doctorStore.unHandledMessage > 0" :value="doctorStore.unHandledMessage" class="item"
+                    style="margin-right: 20px; margin-top: 10px;">
+                    <el-icon size="large">
+                        <Bell />
+                    </el-icon>
+                </el-badge>
+            </el-tooltip>
+
+
+            <el-button type="danger" @click="handleLogout">退出登录</el-button>
         </div>
     </div>
 </template>
@@ -23,8 +33,9 @@ import {
     logoutService
 } from '@/api/api.js';
 import { ElMessage } from 'element-plus';
+import { useDoctorStore } from '@/stores/doctor.js'
 const router = useRouter();
-
+const doctorStore = useDoctorStore();
 const tabs = [
     { label: '预约面板', route: '/doctor/appointment' },
     { label: '个人信息', route: '/doctor/profile' },
@@ -113,7 +124,7 @@ async function handleLogout() {
 }
 
 .tab-item.active {
-    background-color: #007bff;
+    background-color: #0077c2;
     color: #fff;
 }
 </style>

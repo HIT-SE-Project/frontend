@@ -1,7 +1,6 @@
 import './assets/main.css'
 
 import { createApp } from 'vue'
-
 // ElementPlus
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
@@ -29,5 +28,4 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 
 app.use(pinia)
 app.use(router) // 在这里正确注入 Vue Router 实例
-
 app.mount('#app')

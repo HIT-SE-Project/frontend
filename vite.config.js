@@ -18,8 +18,8 @@ export default defineConfig({
       // 获取路径中包含'/api'的请求
       '/api': {
         // 后端服务器所在的源
-        target: 'http://localhost:8080',
-        // target: 'http://114.116.250.107:8080',
+        // target: 'http://localhost:8080',
+        target: 'http://114.116.250.107:8080',
         // 修改源
         changeOrigin: true,
         secure: true,

@@ -3,10 +3,12 @@ import {
     getUserInfo, getUserRecordList,
     getDoctorList, getTimeTable
 } from '@/api/apiUtils.js';
-import { doctorAppointmentService, getAppointmentStatusService, getUserInfoServiceAsync, getTimeTableServiceAsync, getUserRecordListServiceAsync } from '@/api/api.js';
+import { doctorAppointmentService, getAppointmentStatusService, getUserInfoServiceAsync, getUserRecordListServiceAsync } from '@/api/api.js';
 import { useUserStore } from '@/stores/user.js'
 import { useCommonStore } from '@/stores/common.js'
 import { ElMessage } from 'element-plus';
+import { Refresh } from '@element-plus/icons-vue'
+// import { ElSelect, ElOption, ElButton, ElIcon } from 'element-plus';
 import { ref, watch, onMounted, computed } from 'vue'
 const userStore = useUserStore();
 const commonStore = useCommonStore();
@@ -22,15 +24,6 @@ const loadUserrRecordList = async () => {
     }
 };
 
-// // 在组件挂载时调用异步加载函数
-// onMounted(async () => {
-//     await Promise.all([
-//         getUserInfoServiceAsync(),
-//         getUserRecordListServiceAsync(),
-//         getTimeTableServiceAsync(),
-//         loadUserrRecordList() // 调用异步加载函数
-//     ]);
-// });
 
 // 获取基本信息
 onMounted(() => {
@@ -38,6 +31,7 @@ onMounted(() => {
     getUserRecordList();
     getDoctorList();
     getTimeTable();
+
 });
 
 const genderName = (flag) => {
@@ -135,14 +129,6 @@ async function organizeRecordList() {
 const organizedList = ref([]);
 organizeRecordList();
 
-// 个人预约信息Time-line数据（未过期）
-// function filterRecordsForTodayAndFuture() {
-//     const today = new Date();
-//     const formattedToday = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
-//     filteredList.value = organizedList.value.filter(record => record.date >= formattedToday);
-// }
-// const filteredList = ref([]);
-// filterRecordsForTodayAndFuture();
 // 计算属性：过滤出今天及之后的记录
 const filteredList = computed(() => {
     const today = new Date();
@@ -161,6 +147,32 @@ const appointForm = ref({
     date: '',
     timeId: ''
 })
+
+// 医生筛选器
+// 当前选择的科室
+const selectedDepartment = ref('');
+
+// 所有科室的集合
+const departments = computed(() => {
+    const deptSet = new Set();
+    commonStore.doctorList.forEach(doc => {
+        deptSet.add(doc.department);
+    });
+    return Array.from(deptSet);
+});
+
+// 根据选择的科室筛选医生
+const filteredDoctors = computed(() => {
+    return selectedDepartment.value
+        ? commonStore.doctorList.filter(doctor => doctor.department === selectedDepartment.value)
+        : commonStore.doctorList;
+});
+
+// 清除筛选条件的函数
+const clearFilter = () => {
+    selectedDepartment.value = ''; // 重置科室选择
+    // 如果还有其他筛选条件，也在这里重置
+};
 
 // 时间选择器规则 - 仅限今天及之后
 const disabledDate = (time) => {
@@ -190,19 +202,17 @@ async function handleDateChange() {
 
 // 判断该时间段是否已经预约满
 function isSlotUnavailable(timeId) {
-    // if (!this.appointmentStatusResult || this.appointmentStatusResult.length === 0) {
-    //     return true; // 如果数组为空，返回 'N/A' 或其他适当的默认值
-    // }
-
     const slotStatus = appointmentStatusResult.value.find(status => status.timeId === timeId);
     return slotStatus ? (slotStatus.patientNum - slotStatus.reservedNum <= 0) : false;
 }
 
 // 选择医生
 const seletedDoctorName = ref('')
+const seletedDoctorId = ref('')
 const handleDoctorSelect = (doctorId) => {
     appointForm.value.doctorId = doctorId;
     seletedDoctorName.value = commonStore.doctorList.find(doc => doc.doctorId == appointForm.value.doctorId).name;
+    seletedDoctorId.value = doctorId;
 }
 function onSeletedDoctorNameChange() {
     if (appointForm.value.date) {
@@ -213,11 +223,6 @@ watch(seletedDoctorName, onSeletedDoctorNameChange);
 
 // 获取剩余预约数量
 function getRemainingAppointments(timeId) {
-    // 检查appointmentStatusResult是否为空
-    // if (!this.appointmentStatusResult || this.appointmentStatusResult.length === 0) {
-    //     return 'N/A'; // 如果数组为空，返回 'N/A' 或其他适当的默认值
-    // }
-
     const slotStatus = appointmentStatusResult.value.find(status => status.timeId === timeId);
     if (slotStatus) {
         return `${slotStatus.patientNum - slotStatus.reservedNum} / ${slotStatus.patientNum}`;
@@ -246,10 +251,12 @@ async function submitForm() {
                 message: '预约成功',
                 type: 'success',
             });
-
             await getUserInfoServiceAsync();
             await getUserRecordListServiceAsync();
-            window.location.reload();
+            // 延迟1.5秒后刷新页面(让预约成功弹窗多一会)
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
         } else {
             ElMessage({
                 message: '预约失败',
@@ -271,11 +278,11 @@ async function submitForm() {
 <template>
     <div class="appointment-panel-container">
         <!-- 个人信息及预约情况部分 -->
-        <div class="personal-info-area border shadow">
+        <div class="personal-info-area">
             <!-- 个人信息 -->
-            <div class="user-info">
+            <div class="user-info border shadow">
                 <div class="user-info-avatar">
-                    <img :src="userStore.userInfo.image" alt="Avatar">
+                    <img :src="userStore.userInfo.image" alt="请填写个人信息">
                 </div>
                 <div class="user-info-content">
                     <div class="info-row">
@@ -283,13 +290,17 @@ async function submitForm() {
                         <span class="info-value">{{ userStore.userInfo.name }}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">性别: </span>
-                        <span class="info-value">{{ genderName(userStore.userInfo.gender) }}</span>
+                        <div style="margin-right: 20px">
+                            <span class="info-label">性别: </span>
+                            <span class="info-value">{{ genderName(userStore.userInfo.gender) }}</span>
+                        </div>
+                        <div>
+                            <span class="info-label">年龄: </span>
+                            <span class="info-value">{{ userStore.userInfo.age }}</span>
+                        </div>
+
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">年龄: </span>
-                        <span class="info-value">{{ userStore.userInfo.age }}</span>
-                    </div>
+
                     <div class="info-row">
                         <span class="info-label">电话: </span>
                         <span class="info-value">{{ userStore.userInfo.tel }}</span>
@@ -302,33 +313,40 @@ async function submitForm() {
             </div>
 
             <!-- 预约时间线 -->
-            <div class="timeline">
-                <!-- userRecordList : {{ userRecordList }} -->
-                <!-- organizedList: {{ organizedList }} -->
-                <!-- filteredList: {{ filteredList }} -->
-                <el-timeline style="max-width: 600px" v-if="filteredList.length != 0">
-                    <el-timeline-item v-for="(item, index) in filteredList" :key="index" :icon="item.icon"
-                        :type="item.type" :hollow="item.hollow" :timestamp="item.time">
-                        {{ item.name }} {{ item.status }}
-                    </el-timeline-item>
-                </el-timeline>
-                <div v-else style="display: flex; align-items: center; justify-content: center; height: 100%;">暂无预约
+            <div class="timeline-area border shadow">
+                <div class="timeline-heading">
+                    <el-icon style="vertical-align: middle" :size="20">
+                        <List />
+                    </el-icon>预约记录
                 </div>
-            </div>
-
-            <!-- 查看全部历史记录 -->
-            <div class="more">
-                <el-button type="primary" @click="dialogVisible = true">查看全部历史记录</el-button>
-                <el-dialog v-model="dialogVisible" title="历史记录" width="500" style="height: 700px; overflow: auto;"
-                    :before-close="handleClose">
-                    <el-timeline style="max-width: 600px">
-                        <el-timeline-item v-for="(item, index) in organizedList" :key="index" :icon="item.icon"
+                <div class="timeline">
+                    <el-timeline style="max-width: 600px" v-if="filteredList.length != 0">
+                        <el-timeline-item v-for="(item, index) in filteredList" :key="index" :icon="item.icon"
                             :type="item.type" :hollow="item.hollow" :timestamp="item.time">
                             {{ item.name }} {{ item.status }}
                         </el-timeline-item>
                     </el-timeline>
-                </el-dialog>
+                    <div v-else style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                        <el-empty description="暂无预约" />
+                    </div>
+                </div>
+
+                <!-- 查看全部历史记录 -->
+                <div class="more">
+                    <el-button type="primary" style="background-color: #0077C2; color: #fff; height: 40px"
+                        @click="dialogVisible = true">查看全部历史记录</el-button>
+                    <el-dialog v-model="dialogVisible" title="历史记录" width="500" style="height: 700px; overflow: auto;"
+                        :before-close="handleClose">
+                        <el-timeline style="max-width: 600px">
+                            <el-timeline-item v-for="(item, index) in organizedList" :key="index" :icon="item.icon"
+                                :type="item.type" :hollow="item.hollow" :timestamp="item.time">
+                                {{ item.name }} {{ item.status }}
+                            </el-timeline-item>
+                        </el-timeline>
+                    </el-dialog>
+                </div>
             </div>
+
         </div>
 
         <!-- 预约区域 -->
@@ -336,14 +354,25 @@ async function submitForm() {
             <!-- 上方 - 医生列表区域 -->
             <div class="top-area border shadow">
                 <div class="filter">
-                    <!-- 请选择要预约的科室 >
-                    <el-select v-model="value" placeholder="Select" size="large" style="width: 240px">
-                        <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
-                    </el-select> -->
-                    请选择要预约的医生 >
+                    <span class="filter-heading">
+                        <el-icon style="vertical-align: middle" :size="20">
+                            <Connection />
+                        </el-icon> 选择预约医生
+                    </span>
+                    <div>
+                        <!-- 科室选择器 -->
+                        <el-select v-model="selectedDepartment" placeholder="请选择科室" size="large" style="width: 240px">
+                            <el-option v-for="dept in departments" :key="dept" :label="dept" :value="dept" />
+                        </el-select>
+                        <el-button style="margin-left: 10px;background-color: #00619a;" type="primary" circle
+                            @click="clearFilter" :icon="Refresh"></el-button>
+
+                    </div>
+
                 </div>
                 <div class="doctor-list">
-                    <div class="doctor-card" v-for="doctor in commonStore.doctorList" :key="doctor.doctorId">
+                    <div class="doctor-card" v-for="doctor in filteredDoctors" :key="doctor.doctorId"
+                        :class="{ 'doctor-card-highlight': doctor.doctorId === seletedDoctorId }">
                         <div class="avatar">
                             <img :src="doctor.image" alt="医生头像">
                         </div>
@@ -367,7 +396,10 @@ async function submitForm() {
                                     {{ doctor.profile }}
                                 </div>
                                 <div class="reserve-btn">
-                                    <el-button type="success"
+                                    <el-button type="primary" disabled v-if="doctor.doctorId === seletedDoctorId"
+                                        style="width: 90px;"
+                                        @click="handleDoctorSelect(doctor.doctorId)">已选择</el-button>
+                                    <el-button type="primary" v-else style="width: 90px; background-color: #0077c2;"
                                         @click="handleDoctorSelect(doctor.doctorId)">点击选择</el-button>
                                 </div>
                             </div>
@@ -379,10 +411,15 @@ async function submitForm() {
             <!-- 下方 - 预约表单部分 -->
             <div class="bottom-area appointment-form border shadow">
                 <div class="doctor-info">
-                    <span>已选择医生：{{ seletedDoctorName }}</span>
-                    <el-date-picker v-model="appointForm.date" type="date" placeholder="选择日期" :size="size"
-                        value-format="YYYY-MM-DD" :disabled-date="disabledDate" :disabled="!appointForm.doctorId"
-                        @change="handleDateChange" />
+                    <div class="doctor-info-heading">
+                        <el-icon style="vertical-align: middle" :size="20">
+                            <Connection />
+                        </el-icon> 选择预约时间
+                    </div>
+                    <el-date-picker v-model="appointForm.date" type="date" placeholder="选择预约日期"
+                        style="height: 40px; width: 280px;" value-format="YYYY-MM-DD" :disabled-date="disabledDate"
+                        :disabled="!appointForm.doctorId" @change="handleDateChange" />
+
                 </div>
                 <div class="time-slots" v-if="appointForm.doctorId && appointForm.date">
                     <div class="time-slot"
@@ -400,10 +437,16 @@ async function submitForm() {
                     </div>
                 </div>
                 <div class="time-slots no-selected" v-else>
-                    请先选择要预约的医生和日期
+                    <!-- HTML -->
+                    <div
+                        style="display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 20px; width: 80%; height: 80%;">
+                        <div class="select-doctor-svg">
+                        </div>
+                        <span style="color: #a8abb2;">请先选择要预约的医生和日期</span>
+                    </div>
                 </div>
-                <el-button class="submit-button" type="primary" @click="submitForm()"
-                    style="height: 40px;">提交预约</el-button>
+                <el-button class="submit-button" type="primary" @click="submitForm()" :disabled="!appointForm.timeId"
+                    style="height: 40px; background-color: #0077C2;">提交预约</el-button>
             </div>
         </div>
     </div>
@@ -412,31 +455,34 @@ async function submitForm() {
 <style scoped>
 .appointment-panel-container {
     height: 100%;
-    min-width: 950px;
+    min-width: 1250px;
+    min-height: 550px;
     padding: 20px;
     display: grid;
     grid-template-columns: 25% 75%;
     gap: 20px;
     background-color: #f5f6fa;
+    /* background-color: #fff; */
+    /* color: rgba(0, 0, 0, 0.548); */
 }
 
 /* 个人信息部分 */
 .personal-info-area {
-    background-color: #fff;
-    /* display: grid; */
-    /* grid-template-rows: 280px 300px 50px; */
-    display: flex;
-    flex-direction: column;
     height: 100%;
-    /* overflow-y: scroll; */
     overflow: auto;
+    display: grid;
+    grid-template-rows: 140px auto;
+    gap: 20px;
+    min-width: 300px;
 
     .user-info {
-        height: 280px;
-        /* 固定高度 280px */
+        padding: 0 10px;
+        /* background-color: #0f1222; */
+        background-image: linear-gradient(to right, #0077c2 0%, #0178c3 50%, #58a3f3 100%);
+        color: #fff;
         display: grid;
-        grid-template-rows: 120px auto;
-        border-bottom: 1px solid #dcdfe6;
+        grid-template-columns: 120px auto;
+        overflow: hidden;
 
         .user-info-avatar {
             display: flex;
@@ -444,8 +490,8 @@ async function submitForm() {
             justify-content: center;
 
             img {
-                width: 100px;
-                height: 100px;
+                width: 110px;
+                height: 110px;
                 border-radius: 12px;
             }
         }
@@ -472,18 +518,38 @@ async function submitForm() {
         }
     }
 
-    .timeline {
-        padding: 20px 0;
-        flex: 1;
-        overflow-y: auto;
+    .timeline-area {
+        background-color: #fff;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: auto;
+
+        .timeline-heading {
+            height: 50px;
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timeline {
+            padding: 20px 0;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .more {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
     }
 
-    .more {
-        height: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center
-    }
+
 }
 
 /* 预约部分 */
@@ -493,15 +559,34 @@ async function submitForm() {
     grid-template-rows: 2fr 1.2fr;
     gap: 20px;
     margin-right: 20px;
+
 }
 
 /* 左侧区域-> 医生列表 */
 .top-area {
+    background-color: #fff;
+    /* background-color: #f5f5f5; */
     display: grid;
     grid-template-rows: 50px auto;
     overflow: hidden;
-    background-color: #fff;
     padding: 10px;
+
+
+    .filter {
+        display: flex;
+
+        justify-content: space-between;
+
+        .filter-heading {
+            /* display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: row; */
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 10px 0 5px;
+        }
+    }
 
     .doctor-list {
         overflow: auto;
@@ -511,10 +596,13 @@ async function submitForm() {
         display: grid;
         grid-template-columns: 130px auto;
         gap: 10px;
-        border-bottom: 1px solid #dcdfe6;
+        border-bottom: 1px solid #dcdfe677;
         /* margin-bottom: 10px; */
         padding-bottom: 5px;
         padding-top: 15px;
+        transition: background-color 0.3s;
+        /* border: none; */
+        box-sizing: border-box;
 
         .avatar {
             display: flex;
@@ -529,7 +617,7 @@ async function submitForm() {
 
         .info {
             display: grid;
-            grid-template-columns: 140px auto;
+            grid-template-columns: 120px auto;
 
             .info-rows {
                 .row-1 {
@@ -556,6 +644,7 @@ async function submitForm() {
                 .reserve-btn {
                     display: flex;
                     justify-content: right;
+                    margin-right: 8px;
                 }
             }
 
@@ -564,16 +653,33 @@ async function submitForm() {
 
     }
 
+    .doctor-card-highlight {
+        border: 1px solid #0077C2;
+        border-radius: 12px;
+        /* box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3); */
+        background-color: #f8f9fa;
+        background-color: #79bcff60;
+        transition: all 0.3s ease;
+
+        background-image: linear-gradient(to bottom, #cfe6f1 0%, #e6f8ff 100%);
+    }
+
+
+    .doctor-card-highlight .reserve-btn .el-button {
+        background-color: #d4eaf7;
+        color: #5e5e5e;
+    }
 }
 
 /* 右侧区域-> 预约表单 */
 .bottom-area {
+    background-color: #fff;
+    /* background-color: #f5f5f5; */
     height: 100%;
     min-height: 260px;
     width: 100%;
     overflow: auto;
     padding: 20px;
-    background-color: #fff;
     display: grid;
     grid-template-rows: 50px auto 50px;
 
@@ -581,7 +687,12 @@ async function submitForm() {
         margin-bottom: 20px;
         font-weight: 700;
         display: flex;
-        justify-content: space-between
+        justify-content: space-between;
+
+        .doctor-info-heading {
+            font-size: 20px;
+            font-weight: 700;
+        }
     }
 
     .time-slots {
@@ -589,7 +700,18 @@ async function submitForm() {
         flex-wrap: wrap;
         gap: 10px;
 
+        /* CSS */
+        .select-doctor-svg {
+            width: 100%;
+            height: 100%;
+            background-image: url('@/assets/select_doctor.svg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
         .time-slot {
+
             flex: 1 1 140px;
             /* 设置每个时间段卡片的初始大小为 140px，可根据需要调整 */
             padding: 10px;
@@ -602,9 +724,12 @@ async function submitForm() {
             justify-content: space-between;
             cursor: pointer;
             transition: transform 0.2s;
+            /* background-color: #e6e9f4; */
 
             .time {
                 font-weight: 700;
+                /* background-color: #4069ff2d;
+                border-radius: 6px; */
             }
 
             .available {
@@ -613,7 +738,8 @@ async function submitForm() {
         }
 
         .time-slot:hover {
-            background-color: lightgray;
+            background-color: #e7e7e7dc;
+            transition: all 0.3s ease;
         }
 
         .time-slot:active {
@@ -621,8 +747,9 @@ async function submitForm() {
         }
 
         .time-slot.selected {
-            background-color: #409eff;
-            color: #fff;
+            background-color: #b4d4e8;
+            /* color: #fff; */
+            /* color: #000; */
         }
 
         .time-slot.unavailable {

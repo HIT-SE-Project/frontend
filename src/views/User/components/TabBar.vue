@@ -5,13 +5,13 @@
             <div class="tab" v-for="(tab, index) in tabs" :key="index" @click="changeTab(index)"
                 :class="{ active: activeTab === index }">
                 <div class="tab-item"
-                    :style="{ backgroundColor: activeTab === index ? '#007bff' : '#fff', color: activeTab === index ? '#fff' : '#000' }">
+                    :style="{ backgroundColor: activeTab === index ? '#0077C2' : '#fff', color: activeTab === index ? '#fff' : '#000' }">
                     {{ tab.label }}
                 </div>
             </div>
         </div>
         <div class="right">
-            <el-button type="warning" @click="handleLogout">退出登录</el-button>
+            <el-button type="danger" @click="handleLogout">退出登录</el-button>
         </div>
     </div>
 </template>
@@ -74,6 +74,7 @@ async function handleLogout() {
     display: flex;
     color: #000;
     background-color: #fff;
+    border-bottom: 1px solid #dcdfe6;
 }
 
 .left,
@@ -114,8 +115,8 @@ async function handleLogout() {
 
 }
 
-.tab-item.active {
+/* .tab-item.active {
     background-color: #007bff;
     color: #fff;
-}
+} */
 </style>

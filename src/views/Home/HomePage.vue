@@ -2,9 +2,12 @@
 
 </script>
 
+
+
 <template>
-    <div>
-        homepAge
+    <div class="home-page-container">
+        Home Page
+
     </div>
 </template>
 
